@@ -38,8 +38,9 @@ function Write-Log {
 function Get-FolderSizeMB {
     param([string]$Path)
     if (-not (Test-Path $Path)) { return 0 }
-    $bytes = (Get-ChildItem -Path $Path -Recurse -Force -ErrorAction SilentlyContinue |
-              Measure-Object -Property Length -Sum).Sum
+    $items = Get-ChildItem -Path $Path -Recurse -Force -File -ErrorAction SilentlyContinue
+    if (-not $items) { return 0 }
+    $bytes = ($items | Measure-Object -Property Length -Sum).Sum
     if (-not $bytes) { $bytes = 0 }
     return [math]::Round($bytes / 1MB, 1)
 }
