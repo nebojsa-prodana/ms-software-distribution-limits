@@ -1,12 +1,10 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Resets the Windows Update signature cache (catroot2), which frequently
-    accompanies 0x80240034 (WU_E_DOWNLOAD_FAILED) and similar repeated
-    update-download failures. Intended to run after Clean-WUCache.ps1.
+    Resets the Windows Update signature cache (catroot2).
 
 .NOTES
-    Run as Administrator. Windows rebuilds catroot2 automatically on the
-    next update check.
+    Run as Administrator after Clean-WUCache.ps1. Windows rebuilds catroot2 on the next update check.
 #>
 
 [CmdletBinding()]
