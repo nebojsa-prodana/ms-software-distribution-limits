@@ -1,24 +1,10 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Configures Delivery Optimization cache limits — the same settings found in
-    gpedit.msc under Computer Configuration > Administrative Templates >
-    Windows Components > Delivery Optimization — by writing the equivalent
-    registry policy values directly. Useful on Home editions, which don't
-    have gpedit.msc.
-
-.PARAMETER MaxCacheSizePercent
-    Max % of the disk DO's peer cache may use. Windows default is 20.
-
-.PARAMETER AbsoluteMaxCacheSizeGB
-    Hard cap in GB for the DO cache. If set, this overrides the percentage
-    setting above.
-
-.PARAMETER MaxCacheAgeDays
-    How many days a cached file is kept before DO purges it. Windows default is 3.
+    Sets Delivery Optimization cache limits via registry (same as gpedit.msc).
 
 .NOTES
-    Run this in an elevated PowerShell window (Run as Administrator).
-    No reboot required, though 'Restart-Service wuauserv' makes it take effect immediately.
+    Run as Administrator. Optional: Restart-Service wuauserv to apply immediately.
 #>
 
 [CmdletBinding()]

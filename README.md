@@ -1,96 +1,103 @@
 # ms-software-distribution-limits
 
-Om nom nom...
+Scripts to cap Windows Update download cache growth and install updates in controlled batches.
 
-`SoftwareDistribution\Download` really likes to be sitting fat and happy on 20+ gigabytes
-of update files nobody asked it to keep. 
+## Requirements
 
-Failed Windows updates can and will often pile unapplied downloads
-instead of helping you address the core issue that caused the updates to fail in the first place.
+| Item | Notes |
+|---|---|
+| OS | Windows 10/11 |
+| PowerShell | **5.1** (`powershell.exe`) — all scripts use `#Requires -Version 5.1` |
+| Admin | Required for every script except `Get-WUFailureHistory.ps1` |
 
-## Usage
+Use Windows PowerShell 5.1, not PowerShell 7, for update COM work. The scheduled cleanup task also runs under `powershell.exe`.
 
-Open an elevated PowerShell session — right-click the Start button and
-choose **Windows Terminal (Admin)** or **PowerShell (Admin)**, or launch
-PowerShell normally and run `Start-Process powershell -Verb RunAs`.
+## First run
 
-If you downloaded these scripts rather than cloning the repo, unblock them
-once before running anything:
+Open an elevated session (Start → **Windows Terminal (Admin)** or **PowerShell (Admin)**).
+
+If you downloaded the scripts instead of cloning, unblock them once:
 
 ```powershell
 Get-ChildItem *.ps1 | Unblock-File
 ```
 
-Run the three scripts in this order:
+## Cache management
 
-### 1. `Set-DOCachePolicy.ps1` — one-time setup
+Run once, in order:
 
-Caps the Delivery Optimization peer-cache via registry (the same settings
-exposed in `gpedit.msc`), so it stops competing with everything else for
-disk space.
-
-```powershell
-.\Set-DOCachePolicy.ps1 [-MaxCacheSizePercent <int>] [-AbsoluteMaxCacheSizeGB <int>] [-MaxCacheAgeDays <int>]
-```
-
-| Parameter | Default | Description |
-|---|---|---|
-| `-MaxCacheSizePercent` | 10 | Max % of disk the DO cache may use |
-| `-AbsoluteMaxCacheSizeGB` | 5 | Hard cap in GB; overrides the percentage above |
-| `-MaxCacheAgeDays` | 3 | Days before cached files expire |
-
-### 2. `Clean-WUCache.ps1` — run once manually, then on schedule
-
-Stops `wuauserv` and `bits`, clears `SoftwareDistribution\Download`,
-restarts the services, and logs how much space was reclaimed.
+1. **`Set-DOCachePolicy.ps1`** — cap Delivery Optimization peer cache (registry; works on Home editions without gpedit)
+2. **`Clean-WUCache.ps1`** — clear `SoftwareDistribution\Download` and log space reclaimed
+3. **`Register-WUCleanupTask.ps1`** — weekly scheduled cleanup as SYSTEM (Sunday 03:00 by default)
 
 ```powershell
-.\Clean-WUCache.ps1 [-LogPath <string>]
+.\Set-DOCachePolicy.ps1
+.\Clean-WUCache.ps1
+.\Register-WUCleanupTask.ps1
 ```
 
-| Parameter | Default | Description |
-|---|---|---|
-| `-LogPath` | `C:\ProgramData\WUCacheCleanup\cleanup.log` | Where the run log is written |
-
-### 3. `Register-WUCleanupTask.ps1` — automate it
-
-Registers a weekly Scheduled Task that runs `Clean-WUCache.ps1` as SYSTEM,
-so the folder never gets the chance to refill unattended.
+Optional parameters:
 
 ```powershell
-.\Register-WUCleanupTask.ps1 [-ScriptPath <string>] [-DayOfWeek <string>] [-Time <string>]
+.\Set-DOCachePolicy.ps1 -MaxCacheSizePercent 10 -AbsoluteMaxCacheSizeGB 5 -MaxCacheAgeDays 3
+.\Clean-WUCache.ps1 -LogPath 'C:\ProgramData\WUCacheCleanup\cleanup.log'
+.\Register-WUCleanupTask.ps1 -DayOfWeek Sunday -Time '03:00'
 ```
 
-| Parameter | Default | Description |
-|---|---|---|
-| `-ScriptPath` | Same folder as this script | Path to `Clean-WUCache.ps1` |
-| `-DayOfWeek` | Sunday | Day the task runs |
-| `-Time` | 03:00 | Time of day (24h) the task runs |
-
-## Undo
+Remove the scheduled task:
 
 ```powershell
 Unregister-ScheduledTask -TaskName 'WindowsUpdateCacheCleanup'
 ```
 
-To revert the Delivery Optimization policy, delete `DOMaxCacheSize`,
-`DOAbsoluteMaxCacheSize`, and `DOMaxCacheAge` from
+Revert DO policy: delete `DOMaxCacheSize`, `DOAbsoluteMaxCacheSize`, and `DOMaxCacheAge` under  
 `HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization`.
+
+## Update installer
+
+**Use `Get-WUUpdates2.ps1`** — batching, COM timeouts, progress output, and heartbeat during long operations.
+
+```powershell
+.\Get-WUUpdates2.ps1 -MaxUpdatesPerBatch 5 -AutoAcceptEula
+```
+
+Common switches:
+
+| Switch | Default | Purpose |
+|---|---|---|
+| `-MaxBatchSizeGB` | 2 | Max download size per batch |
+| `-MaxUpdatesPerBatch` | 5 | Max updates per batch |
+| `-AutoAcceptEula` | off | Accept update EULAs automatically |
+| `-RefreshServices` | off | Restart `wuauserv` / `DoSvc` before scan |
+| `-IncludeDrivers` | off | Include driver updates |
+| `-IncludeOptional` | off | Include optional updates |
+
+Elevated one-liner:
+
+```powershell
+Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File .\Get-WUUpdates2.ps1'
+```
+
+`Get-WUUpdates.ps1` is kept as a simpler legacy script without timeout protection.
 
 ## Troubleshooting
 
-If `SoftwareDistribution\Download` keeps refilling despite regular cleanup,
-check Windows Update history for a recurring error code first:
+Start with failure history:
 
 ```powershell
 .\Get-WUFailureHistory.ps1 -Days 30
 ```
 
-See [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) for the most common pattern —
-a `0x80240034` download-failure loop — and the scripts that fix it.
+Full guide: [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — recovery ladder, `0x80240034` download loop, **SFC / DISM repair**, stuck installs, and common error codes.
 
-## Requirements
+Quick path when updates keep failing:
 
-- Windows 10/11
-- PowerShell 5.1+
-- Administrator rights
+```powershell
+.\Clean-WUCache.ps1
+.\Reset-WUCatroot2.ps1
+# then in elevated cmd:
+sfc /scannow
+DISM /Online /Cleanup-Image /RestoreHealth
+# reboot, then:
+.\Get-WUUpdates2.ps1 -RefreshServices -MaxUpdatesPerBatch 5 -AutoAcceptEula
+```

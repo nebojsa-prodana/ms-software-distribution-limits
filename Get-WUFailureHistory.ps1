@@ -1,14 +1,10 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Lists failed/aborted Windows Update history entries from the last N days,
-    plus a summary grouped by error code — useful for spotting a recurring
-    failure pattern (e.g. a download loop bloating SoftwareDistribution\Download).
-
-.PARAMETER Days
-    How many days back to look. Default: 30.
+    Lists recent failed Windows Update history grouped by error code.
 
 .NOTES
-    Read-only. Does not require Administrator, though running elevated is fine too.
+    Read-only. Does not require Administrator.
 #>
 
 [CmdletBinding()]

@@ -1,15 +1,10 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Stops the Windows Update services, clears stale content from
-    C:\Windows\SoftwareDistribution\Download, restarts the services, and logs
-    how much space was reclaimed.
-
-.PARAMETER LogPath
-    Where to write the log file. Default: C:\ProgramData\WUCacheCleanup\cleanup.log
+    Clears C:\Windows\SoftwareDistribution\Download and logs space reclaimed.
 
 .NOTES
-    Run as Administrator. Safe to run anytime EXCEPT mid-update-install
-    (avoid running while Windows is actively "Working on updates ___%").
+    Run as Administrator. Do not run while Windows is actively installing updates.
 #>
 
 [CmdletBinding()]

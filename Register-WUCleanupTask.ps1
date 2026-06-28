@@ -1,22 +1,10 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Registers a weekly Scheduled Task that runs Clean-WUCache.ps1 as SYSTEM,
-    so C:\Windows\SoftwareDistribution\Download gets cleared out automatically
-    instead of growing unchecked.
-
-.PARAMETER ScriptPath
-    Full path to Clean-WUCache.ps1. Default assumes it's sitting in the same
-    folder as this script.
-
-.PARAMETER DayOfWeek
-    Day to run the cleanup. Default: Sunday.
-
-.PARAMETER Time
-    Time of day to run, 24h format. Default: 03:00.
+    Registers a weekly scheduled task that runs Clean-WUCache.ps1 as SYSTEM.
 
 .NOTES
-    Run as Administrator. Safe to re-run — it replaces any existing task
-    with the same name rather than erroring out.
+    Run as Administrator. Uses powershell.exe (Windows PowerShell 5.1). Safe to re-run.
 #>
 
 [CmdletBinding()]
